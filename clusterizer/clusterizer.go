@@ -118,36 +118,43 @@ func connectAndPing(donechan chan bool, address net.IP) {
 	}
 
 	target := fmt.Sprintf("%s:%d", address.String(), 9010)
-	conn, err := grpc.Dial(target, opts...)
-	if err != nil {
-		log.Printf("Could not connect: %v", err)
-	}
-	defer conn.Close()
-
-	client := syncc.NewSyncServiceClient(conn)
-	if client == nil {
-		log.Printf("Unable to connect to %s", target)
-	}
 
 	for {
+		conn, err := grpc.Dial(target, opts...)
+		if err != nil {
+			log.Printf("Could not connect: %v", err)
+		}
+		defer conn.Close()
+
+		client := syncc.NewSyncServiceClient(conn)
+		if client == nil {
+			log.Printf("Unable to connect to %s", target)
+		}
+
+		for {
+			if _, more := <-donechan; more == false {
+				log.Printf("Stopping connection to %s", target)
+				return
+			}
+
+			now := uint64(time.Now().UnixNano())
+
+			log.Printf("Sending ping to %s", target)
+			resp, err := client.Ping(context.Background(), &syncc.PingRequest{
+				Ts: now,
+			})
+			if err != nil {
+				log.Printf("Got error sending ping: %v", err)
+				break
+			}
+			log.Printf("Got response from ping: %d", resp.EchoedTs)
+
+			time.Sleep(10 * time.Second)
+		}
 		if _, more := <-donechan; more == false {
 			log.Printf("Stopping connection to %s", target)
 			return
 		}
-
-		now := uint64(time.Now().UnixNano())
-
-		log.Printf("Sending ping to %s", target)
-		resp, err := client.Ping(context.Background(), &syncc.PingRequest{
-			Ts: now,
-		})
-		if err != nil {
-			log.Printf("Got error sending ping: %v", err)
-			return
-		}
-		log.Printf("Got response from ping: %d", resp.EchoedTs)
-
-		time.Sleep(10 * time.Second)
 	}
 }
 
