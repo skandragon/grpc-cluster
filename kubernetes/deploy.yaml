@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: grpc-cluster
+  labels:
+    app: grpc-cluster
+spec:
+  selector:
+    app: grpc-cluster
+  ports:
+  - port: 9010
+    targetPort: 9010
+    name: grpc
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: grpc-cluster
+spec:
+  serviceName: "grpc-cluster"
+  replicas: 2
+  selector:
+    matchLabels:
+      app: grpc-cluster
+  template:
+    metadata:
+      labels:
+        app: grpc-cluster
+    spec:
+      containers:
+        - name: grpc-cluster
+          image: docker.flame.org/library/grpc-cluster:latest
+          ports:
+            - containerPort: 9010
+              name: grpc
