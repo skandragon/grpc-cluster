@@ -19,15 +19,17 @@ type appConfig struct {
 	namespace  string
 }
 
-func makeConfig() *appConfig {
+func dumpEnv() {
 	env := os.Environ()
 	for _, item := range env {
 		log.Printf("Environment: %s", item)
 	}
+}
 
+func makeConfig() (*appConfig, error) {
 	namespace := os.Getenv("POD_NAMESPACE")
 	if len(namespace) == 0 {
-		log.Fatal("Environment variable POD_NAMESPACE is not set.")
+		return nil, fmt.Errorf("environment variable POD_NAMESPACE is not set")
 	}
 
 	service := os.Getenv("SERVICE_NAME")
@@ -41,12 +43,11 @@ func makeConfig() *appConfig {
 	}
 
 	targetname := fmt.Sprintf("%s.%s.svc.%s", service, namespace, dnsSuffix)
-	log.Printf("Using service discovery hostname: %s", targetname)
 
 	return &appConfig{
 		targetname: targetname,
 		namespace:  namespace,
-	}
+	}, nil
 }
 
 func getPeerAddresses() []net.IP {
@@ -61,7 +62,14 @@ func getPeerAddresses() []net.IP {
 }
 
 func main() {
-	config = makeConfig()
+	dumpEnv()
+
+	config, err := makeConfig()
+	if err != nil {
+		log.Panicf("Could not make config: %v", err)
+	}
+
+	log.Printf("Using service discovery hostname: %s", config.targetname)
 
 	for {
 		ips := getPeerAddresses()
