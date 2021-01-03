@@ -30,5 +30,4 @@ grpc-cluster-image.buildtime: ${deps}
 
 .PHONY: test
 test:
-	echo "TODO: Add tests..."
-	#go test  -race ./...
+	go test  -race ./...
