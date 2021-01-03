@@ -33,7 +33,7 @@ spec:
       labels:
         app: grpc-cluster
       annotations:
-        forceRestartcounter: "2"
+        forceRestartcounter: "3"
     spec:
       containers:
         - name: grpc-cluster

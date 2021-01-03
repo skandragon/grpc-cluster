@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package syncc;
+
+option go_package = ".;syncc";
+
+message PingRequest {
+    uint64 ts = 2;
+}
+
+message PingResponse {
+    uint64 ts = 2;
+    uint64 echoedTs = 3;
+}
+
+//
+// Callables.
+//
+
+service SyncService {
+    rpc Ping(PingRequest) returns (PingResponse) {}
+}

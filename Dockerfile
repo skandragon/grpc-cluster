@@ -16,7 +16,7 @@ FROM buildmod AS build
 COPY . .
 ARG TARGETOS
 ARG TARGETARCH
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /build/main main.go
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /build/clusterizer clusterizer/clusterizer.go
 
 #
 # Base OS image for published images
@@ -27,7 +27,7 @@ RUN apk update && apk upgrade
 #
 # Build the image.  This should be a --target on docker build.
 #
-FROM base AS main-image
+FROM base AS clusterizer-image
 WORKDIR /app
-COPY --from=build /build/main /app
-CMD ["/app/main"]
+COPY --from=build /build/clusterizer /app/clusterizer
+CMD ["/app/clusterizer"]

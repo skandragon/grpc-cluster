@@ -1,1 +1,2 @@
 *.buildtime
+syncpb/syncpb.pb.go
