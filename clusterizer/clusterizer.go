@@ -104,63 +104,108 @@ type hostInfo struct {
 func makeHostInfo(address net.IP) *hostInfo {
 	return &hostInfo{
 		address:   address,
-		donechan:  make(chan bool),
+		donechan:  make(chan bool, 1),
 		firstPing: 0,
 		pingCount: 0,
 	}
 }
 
-func connectAndPing(donechan chan bool, address net.IP) {
+func isHostRemoved(donechan chan bool) bool {
+	select {
+	case _ = <-donechan:
+		return true
+	default:
+		return false
+	}
+}
+
+func pingLoop(donechan chan bool, target string) bool {
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 		grpc.WithTimeout(10 * time.Second),
 	}
 
+	log.Printf("Connecting: %s", target)
+	conn, err := grpc.Dial(target, opts...)
+	if err != nil {
+		log.Printf("Could not connect: %s: %v", target, err)
+		return false
+	}
+	defer conn.Close()
+
+	client := syncc.NewSyncServiceClient(conn)
+	if client == nil {
+		log.Printf("Unable to connect: %s", target)
+		return false
+	}
+	log.Printf("Connected: %s", target)
+
+	for {
+		if isHostRemoved(donechan) {
+			return true
+		}
+
+		now := uint64(time.Now().UnixNano())
+		//log.Printf("Sending ping: %s: %d", target, now)
+		resp, err := client.Ping(context.Background(), &syncc.PingRequest{
+			Ts: now,
+		})
+		if err != nil {
+			log.Printf("Got error sending ping: %s: %v", target, err)
+			return false
+		}
+		log.Printf("Got response from ping: %s: %d", target, resp.EchoedTs)
+
+		time.Sleep(10 * time.Second)
+	}
+}
+
+func connectAndPing(donechan chan bool, address net.IP) {
 	target := fmt.Sprintf("%s:%d", address.String(), 9010)
 
 	for {
-		conn, err := grpc.Dial(target, opts...)
-		if err != nil {
-			log.Printf("Could not connect: %v", err)
-		}
-		defer conn.Close()
-
-		client := syncc.NewSyncServiceClient(conn)
-		if client == nil {
-			log.Printf("Unable to connect to %s", target)
+		done := pingLoop(donechan, target)
+		if done {
+			log.Printf("Stopping connection to %s", target)
+			return
 		}
 
-		for {
-			if _, more := <-donechan; more == false {
-				log.Printf("Stopping connection to %s", target)
-				return
-			}
-
-			now := uint64(time.Now().UnixNano())
-
-			log.Printf("Sending ping to %s", target)
-			resp, err := client.Ping(context.Background(), &syncc.PingRequest{
-				Ts: now,
-			})
-			if err != nil {
-				log.Printf("Got error sending ping: %v", err)
-				break
-			}
-			log.Printf("Got response from ping: %d", resp.EchoedTs)
-
-			time.Sleep(10 * time.Second)
-		}
-		if _, more := <-donechan; more == false {
+		if isHostRemoved(donechan) {
 			log.Printf("Stopping connection to %s", target)
 			return
 		}
 	}
 }
 
-func main() {
-	hosts := make(map[string]*hostInfo)
+func (s *syncServer) Ping(ctx context.Context, in *syncc.PingRequest) (*syncc.PingResponse, error) {
+	return &syncc.PingResponse{
+		Ts:       uint64(time.Now().UnixNano()),
+		EchoedTs: in.Ts,
+	}, nil
+}
 
+type syncServer struct {
+	syncc.UnimplementedSyncServiceServer
+}
+
+func newServer() *syncServer {
+	return &syncServer{}
+}
+
+func runGRPCServer() {
+	lis, err := net.Listen("tcp", ":9010")
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+	grpcServer := grpc.NewServer()
+	syncc.RegisterSyncServiceServer(grpcServer, newServer())
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("Failed to start GRPC server: %v", err)
+	}
+}
+
+func main() {
 	dumpEnv()
 
 	cfg, err := makeConfig()
@@ -170,6 +215,9 @@ func main() {
 	config = cfg
 	log.Printf("Using service discovery hostname: %s", config.targetname)
 
+	go runGRPCServer()
+
+	hosts := make(map[string]*hostInfo)
 	for {
 		ips := getPeerAddresses()
 		current := make(map[string]bool)
@@ -183,10 +231,12 @@ func main() {
 		}
 		for k, hostinfo := range hosts {
 			if !current[k] {
-				close(hostinfo.donechan)
+				hostinfo.donechan <- true
 				log.Printf("Host %s removed", k)
+				delete(hosts, k)
 			}
 		}
+		log.Printf("Current host count: %d", len(hosts))
 		time.Sleep(10 * time.Second)
 	}
 }

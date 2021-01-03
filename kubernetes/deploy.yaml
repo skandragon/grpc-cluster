@@ -24,7 +24,8 @@ metadata:
   name: grpc-cluster
 spec:
   serviceName: "grpc-cluster"
-  replicas: 2
+  replicas: 4
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app: grpc-cluster
@@ -33,7 +34,7 @@ spec:
       labels:
         app: grpc-cluster
       annotations:
-        forceRestartcounter: "3"
+        forceRestartcounter: "14"
     spec:
       containers:
         - name: grpc-cluster
@@ -50,3 +51,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "250m"
