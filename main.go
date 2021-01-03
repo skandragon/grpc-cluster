@@ -30,7 +30,17 @@ func makeConfig() *appConfig {
 		log.Fatal("Environment variable POD_NAMESPACE is not set.")
 	}
 
-	targetname := fmt.Sprintf("grpc-cluster.%s.svc.cluster.local", namespace)
+	service := os.Getenv("SERVICE_NAME")
+	if len(service) == 0 {
+		service = "grpc-cluster"
+	}
+
+	dnsSuffix := os.Getenv("DNS_SUFFIX")
+	if len(dnsSuffix) == 0 {
+		dnsSuffix = "cluster.local"
+	}
+
+	targetname := fmt.Sprintf("%s.%s.svc.%s", service, namespace, dnsSuffix)
 	log.Printf("Using service discovery hostname: %s", targetname)
 
 	return &appConfig{
