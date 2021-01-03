@@ -4,6 +4,7 @@
 #
 FROM --platform=${BUILDPLATFORM} golang:1.15.6-alpine AS buildmod
 ENV CGO_ENABLED=0
+RUN mkdir /build
 WORKDIR /build
 COPY go.mod .
 COPY go.sum .
@@ -16,18 +17,20 @@ FROM buildmod AS build
 COPY . .
 ARG TARGETOS
 ARG TARGETARCH
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /build/clusterizer clusterizer/clusterizer.go
+RUN mkdir /out
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /out/clusterizer clusterizer/clusterizer.go
 
 #
 # Base OS image for published images
 #
 FROM alpine AS base
 RUN apk update && apk upgrade
+RUN mkdir /app
 
 #
 # Build the image.  This should be a --target on docker build.
 #
 FROM base AS clusterizer-image
 WORKDIR /app
-COPY --from=build /build/clusterizer /app/clusterizer
+COPY --from=build /out/clusterizer /app/clusterizer
 CMD ["/app/clusterizer"]

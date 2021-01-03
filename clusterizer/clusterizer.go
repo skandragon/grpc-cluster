@@ -79,7 +79,8 @@ func notMyAddress(address net.IP) bool {
 func getPeerAddresses() []net.IP {
 	allIPs, err := net.LookupIP(config.targetname)
 	if err != nil {
-		log.Fatalf("Cannot look up %s: %v", config.targetname, err)
+		log.Printf("Cannot look up %s: %v", config.targetname, err)
+		return []net.IP{}
 	}
 	ips := make([]net.IP, 0)
 	for _, ip := range allIPs {
@@ -111,30 +112,32 @@ func makeHostInfo(address net.IP) *hostInfo {
 
 func connectAndPing(donechan chan bool, address net.IP) {
 	opts := []grpc.DialOption{
+		grpc.WithInsecure(),
 		grpc.WithBlock(),
 		grpc.WithTimeout(10 * time.Second),
 	}
 
-	conn, err := grpc.Dial(address.String(), opts...)
+	target := fmt.Sprintf("%s:%d", address.String(), 9010)
+	conn, err := grpc.Dial(target, opts...)
 	if err != nil {
-		log.Fatalf("Could not connect: %v", err)
+		log.Printf("Could not connect: %v", err)
 	}
 	defer conn.Close()
 
 	client := syncc.NewSyncServiceClient(conn)
 	if client == nil {
-		log.Fatalf("Unable to connect to %s", address.String())
+		log.Printf("Unable to connect to %s", target)
 	}
 
 	for {
 		if _, more := <-donechan; more == false {
-			log.Printf("Stopping connection to %s", address.String())
+			log.Printf("Stopping connection to %s", target)
 			return
 		}
 
 		now := uint64(time.Now().UnixNano())
 
-		log.Printf("Sending ping to %s", address.String())
+		log.Printf("Sending ping to %s", target)
 		resp, err := client.Ping(context.Background(), &syncc.PingRequest{
 			Ts: now,
 		})
@@ -153,11 +156,11 @@ func main() {
 
 	dumpEnv()
 
-	config, err := makeConfig()
+	cfg, err := makeConfig()
 	if err != nil {
 		log.Panicf("Could not make config: %v", err)
 	}
-
+	config = cfg
 	log.Printf("Using service discovery hostname: %s", config.targetname)
 
 	for {
