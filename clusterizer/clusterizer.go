@@ -205,18 +205,7 @@ func runGRPCServer() {
 	}
 }
 
-func main() {
-	dumpEnv()
-
-	cfg, err := makeConfig()
-	if err != nil {
-		log.Panicf("Could not make config: %v", err)
-	}
-	config = cfg
-	log.Printf("Using service discovery hostname: %s", config.targetname)
-
-	go runGRPCServer()
-
+func runHostTracking() {
 	hosts := make(map[string]*hostInfo)
 	for {
 		ips := getPeerAddresses()
@@ -239,4 +228,19 @@ func main() {
 		log.Printf("Current host count: %d", len(hosts))
 		time.Sleep(10 * time.Second)
 	}
+}
+
+func main() {
+	dumpEnv()
+
+	cfg, err := makeConfig()
+	if err != nil {
+		log.Panicf("Could not make config: %v", err)
+	}
+	config = cfg
+	log.Printf("Using service discovery hostname: %s", config.targetname)
+
+	go runGRPCServer()
+
+	runHostTracking()
 }
