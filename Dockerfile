@@ -33,4 +33,5 @@ RUN mkdir /app
 FROM base AS clusterizer-image
 WORKDIR /app
 COPY --from=build /out/clusterizer /app/clusterizer
+EXPOSE 9102 9010
 CMD ["/app/clusterizer"]
