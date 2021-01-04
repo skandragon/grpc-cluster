@@ -35,6 +35,8 @@ spec:
         app: grpc-cluster
       annotations:
         forceRestartcounter: "14"
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9102"
     spec:
       containers:
         - name: grpc-cluster

@@ -3,21 +3,38 @@ package main
 import (
 	"bytes"
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/skandragon/grpc-cluster/syncc"
 
 	"google.golang.org/grpc"
 )
 
 var (
+	prometheusPort = flag.Int("prometheusPort", 9102, "The HTTP port to serve /metrics for Prometheus")
+
 	config *appConfig
+
+	// metrics
+	knownPeersGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "peers_known",
+		Help: "The currently known peers",
+	}, []string{})
+	connectedPeersGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "peers_connected",
+		Help: "The currently connected peers",
+	}, []string{})
 )
 
 type appConfig struct {
@@ -140,6 +157,8 @@ func pingLoop(donechan chan bool, target string) bool {
 		return false
 	}
 	log.Printf("Connected: %s", target)
+	connectedPeersGauge.WithLabelValues().Inc()
+	defer connectedPeersGauge.WithLabelValues().Dec()
 
 	for {
 		if isHostRemoved(donechan) {
@@ -226,12 +245,31 @@ func runHostTracking() {
 			}
 		}
 		log.Printf("Current host count: %d", len(hosts))
+		knownPeersGauge.WithLabelValues().Set(float64(len(hosts)))
 		time.Sleep(10 * time.Second)
 	}
 }
 
+func runPrometheusHTTPServer(port int) {
+	log.Printf("Running HTTP listener for Prometheus on port %d", port)
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%d", port),
+		Handler: mux,
+	}
+	server.ListenAndServe()
+
+	prometheus.MustRegister(knownPeersGauge)
+	prometheus.MustRegister(connectedPeersGauge)
+}
+
 func main() {
 	dumpEnv()
+
+	flag.Parse()
 
 	cfg, err := makeConfig()
 	if err != nil {
@@ -240,7 +278,14 @@ func main() {
 	config = cfg
 	log.Printf("Using service discovery hostname: %s", config.targetname)
 
+	//
+	// Run Prometheus HTTP server
+	//
+	if prometheusPort != nil {
+		go runPrometheusHTTPServer(*prometheusPort)
+	}
+
 	go runGRPCServer()
 
-	runHostTracking()
+	runHostTracking() // should never return
 }
