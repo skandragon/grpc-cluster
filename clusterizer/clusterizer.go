@@ -158,10 +158,10 @@ func pingLoop(donechan chan bool, target string) bool {
 	}
 	log.Printf("Connected: %s", target)
 	connectedPeersGauge.WithLabelValues().Inc()
-	defer connectedPeersGauge.WithLabelValues().Dec()
 
 	for {
 		if isHostRemoved(donechan) {
+			connectedPeersGauge.WithLabelValues().Dec()
 			return true
 		}
 
@@ -172,6 +172,7 @@ func pingLoop(donechan chan bool, target string) bool {
 		})
 		if err != nil {
 			log.Printf("Got error sending ping: %s: %v", target, err)
+			connectedPeersGauge.WithLabelValues().Dec()
 			return false
 		}
 		log.Printf("Got response from ping: %s: %d", target, resp.EchoedTs)

@@ -14,6 +14,10 @@ spec:
     targetPort: 9010
     name: grpc
     protocol: TCP
+  - port: 9102
+    targetPort: 9102
+    name: metrics
+    protocol: TCP
 
 ---
 
@@ -35,8 +39,6 @@ spec:
         app: grpc-cluster
       annotations:
         forceRestartcounter: "14"
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "9102"
     spec:
       containers:
         - name: grpc-cluster
@@ -44,6 +46,8 @@ spec:
           ports:
             - containerPort: 9010
               name: grpc
+            - containerPort: 9102
+              name: metrics
           env:
             - name: POD_IPS
               valueFrom:
