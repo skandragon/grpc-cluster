@@ -2,10 +2,11 @@ TARGETS=test local
 PLATFORM=linux/amd64,linux/arm64
 BUILD=docker buildx build --pull --platform ${PLATFORM}
 
-deps = \
-	clusterizer/clusterizer.go
-
+# Generated protobuf outputs.  These are removed with "make clean"
 pb_deps = syncc/syncc.pb.go
+
+deps = ${pb_deps} \
+	clusterizer/clusterizer.go
 
 now = `date -u +%Y%m%dT%H%M%S`
 
@@ -45,7 +46,11 @@ images: grpc-cluster-image
 grpc-cluster-image: grpc-cluster-image.buildtime
 
 grpc-cluster-image.buildtime: ${deps} ${pb_deps} Dockerfile
-	@${BUILD} --tag docker.flame.org/library/grpc-cluster:latest --tag docker.flame.org/library/grpc-cluster:v${now} --target clusterizer-image . --push
+	@${BUILD} \
+	    --tag docker.flame.org/library/grpc-cluster:latest \
+		--tag docker.flame.org/library/grpc-cluster:v${now} \
+		--target clusterizer-image . \
+		--push
 	touch grpc-cluster-image.buildtime
 
 #
@@ -63,5 +68,5 @@ test: ${pb_deps}
 .PHONY: clean
 clean:
 	rm -f *.buildtime
-	rm -f syncc/syncc.pb.go
+	rm -f ${pb_deps}
 	rm -f bin/*
