@@ -14,6 +14,25 @@ spec:
     targetPort: 9010
     name: grpc
     protocol: TCP
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: grpc-cluster
+  name: grpc-service
+  labels:
+    app: grpc-cluster
+spec:
+  selector:
+    app: grpc-cluster
+  type: ClusterIP
+  ports:
+  - port: 9010
+    targetPort: 9010
+    name: grpc
+    protocol: TCP
   - port: 9102
     targetPort: 9102
     name: metrics
