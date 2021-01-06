@@ -22,14 +22,12 @@ spec:
 ---
 
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   namespace: grpc-cluster
   name: grpc-cluster
 spec:
-  serviceName: "grpc-cluster"
   replicas: 4
-  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app: grpc-cluster
