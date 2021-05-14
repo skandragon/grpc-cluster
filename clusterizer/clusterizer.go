@@ -129,7 +129,7 @@ func makeHostInfo(address net.IP) *hostInfo {
 
 func isHostRemoved(donechan chan bool) bool {
 	select {
-	case _ = <-donechan:
+	case <-donechan:
 		return true
 	default:
 		return false
@@ -140,11 +140,13 @@ func pingLoop(donechan chan bool, target string) bool {
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
-		grpc.WithTimeout(10 * time.Second),
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
 	log.Printf("Connecting: %s", target)
-	conn, err := grpc.Dial(target, opts...)
+	conn, err := grpc.DialContext(ctx, target, opts...)
 	if err != nil {
 		log.Printf("Could not connect: %s: %v", target, err)
 		return false
