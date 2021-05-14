@@ -290,5 +290,5 @@ func main() {
 
 	go runGRPCServer()
 
-	runHostTracking() // should never return
+	runHostTracking()
 }
