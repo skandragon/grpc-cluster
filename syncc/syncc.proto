@@ -5,12 +5,12 @@ package syncc;
 option go_package = ".;syncc";
 
 message PingRequest {
-    uint64 ts = 2;
+    uint64 ts = 1;
 }
 
 message PingResponse {
-    uint64 ts = 2;
-    uint64 echoedTs = 3;
+    uint64 ts = 1;
+    uint64 echoedTs = 2;
 }
 
 //
