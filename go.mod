@@ -1,14 +1,23 @@
 module github.com/skandragon/grpc-cluster
 
-go 1.15
+go 1.20
 
 require (
 	github.com/golang/protobuf v1.5.2
-	github.com/prometheus/client_golang v1.10.0
-	github.com/prometheus/common v0.24.0 // indirect
-	golang.org/x/net v0.0.0-20210510120150-4163338589ed // indirect
-	golang.org/x/sys v0.0.0-20210514084401-e8d321eab015 // indirect
-	google.golang.org/genproto v0.0.0-20210513213006-bf773b8c8384 // indirect
-	google.golang.org/grpc v1.37.1
-	google.golang.org/protobuf v1.26.0
+	github.com/prometheus/client_golang v1.14.0
+	google.golang.org/grpc v1.53.0
+	google.golang.org/protobuf v1.28.1
+)
+
+require (
+	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
+	github.com/prometheus/client_model v0.3.0 // indirect
+	github.com/prometheus/common v0.41.0 // indirect
+	github.com/prometheus/procfs v0.9.0 // indirect
+	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
+	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
 )

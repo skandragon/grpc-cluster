@@ -22,7 +22,11 @@ all: ${TARGETS}
 #
 
 syncc/syncc.pb.go: go.mod syncc/syncc.proto
-	protoc --go_out=plugins=grpc:syncc syncc/syncc.proto
+	protoc --go_out=. \
+		--go_opt=paths=source_relative \
+		--go-grpc_out=. \
+		--go-grpc_opt=paths=source_relative \
+		syncc/syncc.proto
 
 #
 # Build locally, mostly for development speed.
